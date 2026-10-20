@@ -174,8 +174,8 @@ Usage: ./setup <command> [options]
   vscodium    install the editor's extensions and merge its settings
   nautilus    apply the file manager's settings and sidebar
   vesktop     tick the palette's theme in Vencord
-  face        unlock the lock screen with your face, where there is an
-              infrared camera: installs howdy-next and enrols you
+  face        unlock the lock screen with your face: installs howdy-git,
+              enrols you, and prefers an infrared camera when there is one
   camera      effects and gesture reactions on the webcam, for any call:
               installs the virtual camera and the face and hand models
   splash      the boot splash: chooses the theme, adds splash to the kernel
@@ -766,6 +766,29 @@ aur_helper() {
 # One name a line, `#` starting a comment anywhere.
 names() { sed 's/#.*//' "$1" | tr -s ' \t' '\n' | sed '/^$/d'; }
 
+# Which howdy this machine has. Every one of them provides `howdy`, so the
+# command alone says yes to the 2.6.1 in the plain howdy package as well —
+# and that one cannot stand here. pacman answers for a package it installed;
+# a howdy put down by hand, with makepkg -i or the upstream installer, is
+# taken at its word and reported as its own kind.
+howdy_installed() {
+    local version
+    version=$(howdy --version 2>/dev/null || true)
+    if pacman -Q howdy-git >/dev/null 2>&1; then
+        say "howdy     howdy-git${version:+ ($version)}"
+        return 0
+    fi
+    if command -v howdy >/dev/null; then
+        if [[ $version == *2.6* ]]; then
+            refuse 'the howdy installed is 2.6.1, whose PAM module is not the one the lock screen is wired for (./setup face wants howdy-git)'
+            return 1
+        fi
+        say "howdy     ${version:-howdy (installed)}"
+        return 0
+    fi
+    return 1
+}
+
 # `pacman -T` also counts providers, so e.g. fnm-bin satisfies fnm.
 verb_packages() {
     local -a yes=() want missing
@@ -1077,7 +1100,7 @@ DEFAULT_APPS=(
     'imv.desktop image/jpeg image/png image/gif image/webp image/svg+xml'
     'nvim.desktop text/plain application/json'
     'org.gnome.Nautilus.desktop inode/directory'
-    'zen.desktop text/html application/pdf x-scheme-handler/http x-scheme-handler/https'
+    'google-chrome.desktop text/html application/pdf x-scheme-handler/http x-scheme-handler/https'
 )
 
 # Whether mimeapps.list names a default for a type. `xdg-mime query` cannot
@@ -1240,55 +1263,96 @@ verb_nautilus() {
     say 'settings and sidebar applied'
 }
 
-# The infrared half of a Windows Hello camera: the capture device that offers
-# 8-bit grey, by its stable /dev/v4l/by-path name when it has one.
-ir_camera() {
-    local dev link formats
+# The camera a face is read from, by its stable /dev/v4l/by-path name when it
+# has one. A real capture device is required: the metadata node beside a UVC
+# camera carries UVC payload headers, lists no formats and can never produce a
+# frame, so it is passed over. Grey (the infrared half of a Windows Hello
+# camera) is preferred and is what howdy is built for; a camera that offers
+# only colour is taken too, since a laptop with no infrared sensor would
+# otherwise have no face unlock at all. What is chosen is said out loud,
+# because the two differ in more than name: an infrared frame is lit by the
+# emitter and a face is nearly all howdy will see, while a colour frame
+# carries whatever the room shows and can be spoofed with a photograph.
+face_camera() {
+    local dev link formats grey=() colour=()
     for dev in /dev/video*; do
         [[ -c $dev ]] || continue
+        [[ $(cat "/sys/class/video4linux/${dev##*/}/name" 2>/dev/null) == 'impasto camera' ]] && continue
+        # Only a node whose own capabilities say Video Capture can be read
+        # from; Metadata Capture and the like are noted and left alone.
+        v4l2-ctl -d "$dev" --all 2>/dev/null \
+            | sed -n '/^[[:space:]]*Device Caps/,/^[[:space:]]*[A-Z][a-z].*:/p' \
+            | grep -q '^[[:space:]]*Video Capture$' || continue
         formats=$(v4l2-ctl -d "$dev" --list-formats 2>/dev/null) || continue
-        [[ $formats == *"'GREY'"* ]] || continue
-        for link in /dev/v4l/by-path/*; do
-            if [[ $(readlink -f "$link") == "$dev" ]]; then printf '%s\n' "$link"; return 0; fi
-        done
-        printf '%s\n' "$dev"
-        return 0
+        grep -q "Video Capture" <<<"$formats" || continue
+        if [[ $formats == *"'GREY'"* ]]; then grey+=("$dev"); else colour+=("$dev"); fi
     done
-    return 1
+    # Nothing, infrared first, then colour.
+    local pick=${grey[0]:-${colour[0]:-}}
+    [[ -n $pick ]] || return 1
+    # Named out, so the caller learns which kind it got without a subshell.
+    printf -v "$2" '%s' "$([[ -n ${grey[0]:-} && ${#grey[@]} -gt 0 ]] && printf 1 || printf 0)"
+    for link in /dev/v4l/by-path/*; do
+        if [[ $(readlink -f "$link") == "$(readlink -f "$pick")" ]]; then printf -v "$1" '%s' "$link"; return 0; fi
+    done
+    printf -v "$1" '%s' "$pick"
 }
 
-# Face unlock for the lock screen: howdy-next on the infrared camera, asked
-# through the lock's own PAM service, system/etc/pam.d/impasto-face. Not in
-# packages/, since it brings opencv and only a machine with an infrared camera
-# can use it. Enrolling needs somebody in front of the camera, so an install
-# that cannot ask leaves it for this verb.
+# Face unlock for the lock screen: howdy-git on the camera face_camera()
+# picked, asked through the lock's own PAM service,
+# system/etc/pam.d/impasto-face. Not in packages/, since it brings opencv and
+# only a machine with a camera can use it. Enrolling needs somebody in front
+# of the camera, so an install that cannot ask leaves it for this verb.
+#
+# howdy-git is upstream's 3.0 branch, the one whose module is pam_howdy.so:
+# the PAM line and the face helper beside it speak for it. The plain howdy in
+# the AUR is 2.6.1, whose module is pam_python.so and whose list is not the
+# machine-readable one the helper reads, so it cannot stand here. Every howdy
+# here provides `howdy`, so what is installed is settled by name.
 verb_face() {
     section 'face unlock'
     command -v v4l2-ctl >/dev/null || refuse 'v4l2-ctl is not installed (package: v4l-utils)' || return
-    local camera
+    local camera IR
     local -a yes=()
     if (( NOCONFIRM )); then yes=(--noconfirm); fi
-    if ! camera=$(ir_camera); then
-        if [[ -n $SOFT ]]; then say 'skipped  no infrared camera'; return 0; fi
-        fail 'no infrared camera: face unlock needs one'
+    if ! face_camera camera IR; then
+        if [[ -n $SOFT ]]; then say 'skipped  no camera'; return 0; fi
+        fail 'no camera: face unlock needs one'
     fi
     [[ -f /etc/pam.d/impasto-face ]] \
         || refuse "the lock screen's PAM service is not installed (./setup system)" || return
-    # Built without its test suite: one test races the compare process against
-    # the password prompt and fails under a parallel build, and passes alone.
-    if ! command -v howdy >/dev/null; then
-        aur_helper || refuse 'howdy-next needs an AUR helper' || return
-        act "$HELPER" -S --needed "${yes[@]}" --mflags --nocheck howdy-next \
-            || refuse 'howdy-next was not installed' || return
-        say 'installed howdy-next'
+    if ! howdy_installed; then
+        aur_helper || refuse 'howdy-git needs an AUR helper' || return
+        # Built without its test suite: one test races the compare process
+        # against the password prompt and fails under a parallel build, and
+        # passes alone.
+        act "$HELPER" -S --needed "${yes[@]}" --mflags --nocheck howdy-git \
+            || refuse 'howdy-git was not installed' || return
+        say 'installed howdy-git'
     fi
-    act sudo howdy download-models >/dev/null || refuse 'the recognition models did not download' || return
+    # The dlib data files the recognition reads: shipped in the package here
+    # rather than fetched, which is why upstream's howdy has no
+    # download-models command. Absent, howdy add says so itself; this catches
+    # it before the camera is ever opened.
+    local model
+    for model in shape_predictor_5_face_landmarks.dat \
+                 dlib_face_recognition_resnet_model_v1.dat; do
+        [[ -f /usr/share/dlib-data/$model ]] \
+            || refuse "the recognition model $model is missing (package: howdy-git)" || return
+    done
     # The notice is the lock screen's cue that the camera is on.
     act sudo howdy set device_path "$camera" >/dev/null \
         && act sudo howdy set detection_notice true >/dev/null \
         || refuse 'howdy could not be configured' || return
     say "camera   $camera"
-    if (( ! DRY )) && sudo howdy list >/dev/null 2>&1; then
+    if (( IR )); then
+        say 'infrared · lit by the camera itself'
+    else
+        say 'colour   · no infrared sensor, so a steady light and a careful'
+        say '           head-on angle matter, and a photograph of you can'
+        say '           fool it'
+    fi
+    if (( ! DRY )) && sudo howdy list --plain >/dev/null 2>&1; then
         say 'kept     the face already enrolled · Settings → Session adds another'
     elif (( NOCONFIRM )) || [[ ! -t 0 ]]; then
         refuse 'enrolling needs you in front of the camera' || return

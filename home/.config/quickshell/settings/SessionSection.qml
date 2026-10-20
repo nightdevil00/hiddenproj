@@ -509,15 +509,17 @@ SettingsSection {
         // FaceService's helper, which asks for the password itself.
         SettingGroup {
             title: Tr.t("Face unlock")
-            note: Tr.t("The lock screen only, with the infrared camera.")
+            note: Tr.t("The lock screen only, with the camera.")
             hint: Tr.t("howdy keeps the faces where only root can read them, so adding or removing one asks for your password. The login screen, sudo and polkit still ask for the password.")
+                + (FaceService.known && FaceService.camera && !FaceService.infrared
+                    ? " " + Tr.t("This camera has no infrared sensor: a steady light and a head-on angle matter, and a photograph of you can fool it.") : "")
 
             SettingRow {
                 label: Tr.t("Face unlock")
                 reading: root.faceReading
                 alarm: FaceService.outcome !== "" && FaceService.outcome !== "added"
                 locked: FaceService.known && !FaceService.camera
-                reason: Tr.t("Needs an infrared camera")
+                reason: Tr.t("Needs a camera")
 
                 PillButton {
                     visible: FaceService.known && FaceService.camera

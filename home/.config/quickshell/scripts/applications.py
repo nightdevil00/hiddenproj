@@ -31,7 +31,11 @@ APPLICATION_DIRS = [
 
 
 def read_entry(path):
-    parser = configparser.ConfigParser(interpolation=None)
+    # strict=False: the desktop-entry spec lets a key repeat and take its last
+    # value, and real files do — Google Chrome's StartupWMClass is declared
+    # twice in one section. With the default strict parser the whole file is
+    # rejected, so the application disappears from the launcher without a word.
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
     try:
         parser.read(path, encoding="utf-8")
         section = parser["Desktop Entry"]

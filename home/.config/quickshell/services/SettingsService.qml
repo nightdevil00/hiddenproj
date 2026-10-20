@@ -525,8 +525,8 @@ Singleton {
         // surface is on every screen either way: this is whether it paints.
         property bool barEverywhere: true
 
-        // Zen: the bar off the screen and its band given to the windows; the
-        // island still comes down for what it has to show.
+        // Stripped: the bar off the screen and its band given to the windows;
+        // the island still comes down for what it has to show.
         property bool barHidden: false
 
         // Every screen's four corners rounded off in black.

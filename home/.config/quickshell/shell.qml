@@ -437,7 +437,7 @@ ShellRoot {
     }
 
     GlobalShortcut {
-        name: "zen"
+        name: "stripped"
         description: "Hide or show the bar"
         onPressed: SettingsService.set("barHidden", !SettingsService.barHidden)
     }

@@ -603,7 +603,7 @@ QtObject {
             "Launcher button": "Botón del lanzador",
             "Open applications": "Aplicaciones abiertas",
             "On every screen": "En todas las pantallas",
-            "Zen": "Zen",
+            "Stripped": "Stripped",
             "One on each, all showing the same": "Uno en cada una, todos iguales",
             "Only on the screen you are on": "Solo en la pantalla en la que estás",
             "One on each, and the one you are on is the live one":
@@ -665,6 +665,10 @@ QtObject {
             "Apps": "Aplicaciones",
 
             "Clipboard history": "Historial del portapapeles",
+            "Copy": "Copiar",
+            "Cut": "Cortar",
+            "Paste": "Pegar",
+            "Select all": "Seleccionar todo",
             "Everything copied, searchable from the launcher.":
                 "Todo lo copiado, con búsqueda desde el lanzador.",
             "Copies from password managers are never stored, and turning the history off stops the watcher entirely. Emptying on lock is off by default, since the lock already protects the session.":
@@ -1041,11 +1045,13 @@ QtObject {
             "Show fewer": "Ver menos",
 
             "Face unlock": "Desbloqueo facial",
-            "The lock screen only, with the infrared camera.":
-                "Solo en la pantalla de bloqueo, con la cámara de infrarrojos.",
+            "The lock screen only, with the camera.":
+                "Solo en la pantalla de bloqueo, con la cámara.",
             "howdy keeps the faces where only root can read them, so adding or removing one asks for your password. The login screen, sudo and polkit still ask for the password.":
                 "howdy guarda las caras donde solo root puede leerlas, así que añadir o quitar una pide tu contraseña. La pantalla de inicio de sesión, sudo y polkit siguen pidiendo la contraseña.",
-            "Needs an infrared camera": "Necesita una cámara de infrarrojos",
+            "This camera has no infrared sensor: a steady light and a head-on angle matter, and a photograph of you can fool it.":
+                "Esta cámara no tiene sensor de infrarrojos: conviene una luz estable y mirar de frente, y una fotografía tuya puede engañarla.",
+            "Needs a camera": "Necesita una cámara",
             "Set up": "Configurar",
             "Finish setting up": "Terminar de configurar",
             "Add a face": "Añadir una cara",

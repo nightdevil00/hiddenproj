@@ -125,7 +125,7 @@ Item {
           blurb: Tr.t("Every keybinding, the shell's and Hyprland's."),
           tabs: [{ id: "shell", label: Tr.t("The shell's own") },
                  { id: "compositor", label: Tr.t("The compositor's") }],
-          keywords: "keys shortcut shortcuts binding hotkey super rebind zen hide widgets",
+          keywords: "keys shortcut shortcuts binding hotkey super rebind stripped hide widgets",
           page: keysPage },
 
         { id: "session", category: "session", icon: "󰌾", label: Tr.t("Session"),

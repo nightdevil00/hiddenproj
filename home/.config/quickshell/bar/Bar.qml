@@ -148,11 +148,11 @@ PanelWindow {
 
     // The island is showing more than the clock: a panel, a detail, the
     // glance or a notification. An OSD fits in the band and does not count.
-    // In zen too, where the sides are away and the band is only the island.
+    // In stripped too, where the sides are away and the band is only the island.
     readonly property bool islandTaken: island.expanded
         || island.state.layer === island.state.layerSummary
         || island.state.layer === island.state.layerNotification
-        || root.zen
+        || root.stripped
     readonly property real bodyX: root.edgeToEdge
         ? root.edgeMargin : (root.width - root.bodyWidth) / 2
 
@@ -232,20 +232,21 @@ PanelWindow {
     // would drop the widget. None either where nothing is painted.
     readonly property bool inert: DesktopService.editing || !root.painted || root.away
 
-    // Zen (`barHidden`): the bar waits above the screen and the island comes
-    // down only for what it has to show — a panel, a notification, a
+    // Stripped (`barHidden`): the bar waits above the screen and the island
+    // comes down only for what it has to show — a panel, a notification, a
     // transient — with the sides left up there.
-    readonly property bool zen: SettingsService.barHidden
+    readonly property bool stripped: SettingsService.barHidden
     readonly property bool called: island.state.layer !== island.state.layerModules
         && island.state.layer !== island.state.layerSummary
-    readonly property bool away: root.zen && !root.called
+    readonly property bool away: root.stripped && !root.called
 
     mask: Region {
         width: root.inert ? 0 : root.width
-        // In zen the band is empty, and only the island's shape takes input.
+        // In stripped the band is empty, and only the island's shape takes
+        // input.
         height: root.inert ? 0
             : root.wholeScreen ? root.height
-            : root.zen ? 0 : root.collapsedHeight
+            : root.stripped ? 0 : root.collapsedHeight
 
         Region {
             x: root.shapeLeft
@@ -977,7 +978,7 @@ PanelWindow {
             width: sides.cropped ? band.width : root.width
             height: root.height
             clip: sides.cropped
-            opacity: root.zen ? 0 : 1
+            opacity: root.stripped ? 0 : 1
             visible: opacity > 0
 
             Behavior on opacity {

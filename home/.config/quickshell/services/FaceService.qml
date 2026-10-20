@@ -24,8 +24,12 @@ Singleton {
 
     // ── WHAT THE MACHINE HAS ────────────────────────────────────────────────
 
-    // An infrared camera, which is all howdy can use.
+    // A camera howdy can read: an infrared one when there is one, otherwise
+    // a colour one. The metadata node beside a UVC camera is passed over.
+    // What was found matters: on colour, a photograph can fool it.
     property bool camera: false
+    // Whether the camera found is infrared, which howdy is built for.
+    property bool infrared: false
     // howdy itself, from `./setup face`.
     property bool installed: false
     // The helper, its policy and the lock's PAM service, from `./setup system`.
@@ -37,19 +41,24 @@ Singleton {
 
     readonly property Process probe: Process {
         command: ["sh", "-c",
-            "camera=0; for d in /dev/video*; do [ -c \"$d\" ] || continue; "
-            + "v4l2-ctl -d \"$d\" --list-formats 2>/dev/null | grep -q \"'GREY'\" && camera=1 && break; done; "
+            "camera=0; infrared=0; for d in /dev/video*; do [ -c \"$d\" ] || continue; "
+            + "[ \"$(cat /sys/class/video4linux/${d##*/}/name 2>/dev/null)\" = \"impasto camera\" ] && continue; "
+            + "v4l2-ctl -d \"$d\" --all 2>/dev/null | sed -n '/^[[:space:]]*Device Caps/,/^[[:space:]]*[A-Z][a-z].*:/p' | grep -q '^[[:space:]]*Video Capture$' || continue; "
+            + "f=$(v4l2-ctl -d \"$d\" --list-formats 2>/dev/null) || continue; "
+            + "printf '%s\\n' \"$f\" | grep -q 'Video Capture' || continue; "
+            + "case $f in *\"'GREY'\"*) camera=1; infrared=1; break ;; *) camera=1 ;; esac; done; "
             + "installed=0; command -v howdy >/dev/null && installed=1; "
             + "wired=0; test -x /usr/lib/impasto/face "
             + "&& test -f /usr/share/polkit-1/actions/org.impasto.face.policy "
             + "&& test -f /etc/pam.d/impasto-face && test -f /usr/lib/security/pam_howdy.so && wired=1; "
-            + "echo $camera $installed $wired"]
+            + "echo $camera $infrared $installed $wired"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const bits = text.trim().split(" ")
                 root.camera = bits[0] === "1"
-                root.installed = bits[1] === "1"
-                root.wired = bits[2] === "1"
+                root.infrared = bits[1] === "1"
+                root.installed = bits[2] === "1"
+                root.wired = bits[3] === "1"
                 root.known = true
                 if (root.ready)
                     root.list()

@@ -9,8 +9,9 @@
 
 -- No bind uses /, ., ' or `: they are shifted or dead keys on a Spanish layout.
 
-local apps    = require("modules.programs")
-local mainMod = "SUPER"
+local apps              = require("modules.programs")
+local universalClipboard = require("modules.universal_clipboard")
+local mainMod           = "SUPER"
 
 
 -- ── PROFILE KEYS ────────────────────────────────────────────────────────────
@@ -64,6 +65,20 @@ hl.config({
 bind(mainMod .. " + Return", hl.dsp.exec_cmd(apps.terminal),     { description = "Applications · Open a terminal" })
 bind(mainMod .. " + E",      hl.dsp.exec_cmd(apps.file_manager), { description = "Applications · Open the file manager" })
 bind(mainMod .. " + B",      hl.dsp.exec_cmd(apps.browser),      { description = "Applications · Open the browser" })
+
+
+-- ── UNIVERSAL CLIPBOARD ─────────────────────────────────────────────────────
+
+-- Copy, cut, paste and select all, whichever program is focused. The press is
+-- re-sent to the window as the application's own shortcut; a terminal gets
+-- CTRL + SHIFT for copy and paste, since CTRL + C there interrupts the
+-- command. See modules/universal_clipboard.lua.
+--
+-- The clipboard history is a launcher mode, on SUPER + CTRL + V below.
+bind(mainMod .. " + C", universalClipboard.copy,      { description = "Clipboard · Copy" })
+bind(mainMod .. " + X", universalClipboard.cut,       { description = "Clipboard · Cut" })
+bind(mainMod .. " + V", universalClipboard.paste,     { description = "Clipboard · Paste" })
+bind(mainMod .. " + A", universalClipboard.select_all,{ description = "Clipboard · Select all" })
 
 
 -- ── WINDOWS ─────────────────────────────────────────────────────────────────
@@ -326,7 +341,7 @@ bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true,
 -- · the power button opens the session menu instead of powering off (logind
 -- · is told to ignore it, see system/etc/systemd/logind.conf.d/). Some
 -- · machines never report a short press, so the menu has keyboard binds too.
-bind(mainMod .. " + X",         hl.dsp.global("quickshell:session"), { description = "Session · Session menu" })
+bind(mainMod .. " + CTRL + X",  hl.dsp.global("quickshell:session"), { description = "Session · Session menu" })
 bind("CTRL + ALT + Delete",     hl.dsp.global("quickshell:session"), { description = "Session · Session menu, from CTRL + ALT + Delete" })
 bind("XF86PowerOff",            hl.dsp.global("quickshell:session"), { description = "Session · Session menu, from the power button" })
 bind(mainMod .. " + L",         hl.dsp.global("quickshell:lock"),    { description = "Session · Lock the screen" })
@@ -346,7 +361,7 @@ bind(mainMod .. " + CTRL + R",  hl.dsp.exec_cmd("pkill -x quickshell; pkill -x q
 
 -- · global shortcuts registered by the shell
 bind(mainMod .. " + Space",     hl.dsp.global("quickshell:launcher"),   { description = "Shell · Open the launcher" })
-bind(mainMod .. " + A",         hl.dsp.global("quickshell:controls"),   { description = "Shell · Open the control centre" })
+bind(mainMod .. " + CTRL + A",  hl.dsp.global("quickshell:controls"),   { description = "Shell · Open the control centre" })
 bind(mainMod .. " + TAB",       hl.dsp.global("quickshell:overview"),   { description = "Shell · Open the workspace overview" })
 bind(mainMod .. " + comma",     hl.dsp.global("quickshell:settings"),   { description = "Shell · Open settings" })
 bind(mainMod .. " + T",         hl.dsp.global("quickshell:appearance"), { description = "Shell · Open appearance" })
@@ -361,8 +376,8 @@ bind(mainMod .. " + K",         hl.dsp.global("quickshell:board"),      { descri
 -- · Spanish layout
 bind(mainMod .. " + H",         hl.dsp.global("quickshell:keys"),       { description = "Shell · Show every key" })
 
--- · zen: the bar away and its band to the windows; and the widgets away
-bind(mainMod .. " + CTRL + B",  hl.dsp.global("quickshell:zen"),        { description = "Shell · Hide or show the bar" })
+-- · stripped: the bar away and its band to the windows; and the widgets away
+bind(mainMod .. " + CTRL + B",  hl.dsp.global("quickshell:stripped"),   { description = "Shell · Hide or show the bar" })
 bind(mainMod .. " + CTRL + W",  hl.dsp.global("quickshell:widgets"),    { description = "Shell · Hide or show the desktop widgets" })
 bind(mainMod .. " + SHIFT + G", hl.dsp.global("quickshell:game"),       { description = "Shell · Turn game mode on or off" })
 
@@ -374,7 +389,7 @@ bind(mainMod .. " + Y",         hl.dsp.global("quickshell:screentime"), { descri
 bind(mainMod .. " + SHIFT + W", hl.dsp.global("quickshell:camera"),     { description = "Shell · Open the camera effects" })
 
 -- · clipboard history is a launcher mode
-bind(mainMod .. " + V",         hl.dsp.global("quickshell:clipboard"),  { description = "Shell · Open the clipboard history" })
+bind(mainMod .. " + CTRL + V",  hl.dsp.global("quickshell:clipboard"),  { description = "Shell · Open the clipboard history" })
 
 -- · emoji, a launcher mode too
 bind(mainMod .. " + period",    hl.dsp.global("quickshell:emoji"),      { description = "Shell · Pick an emoji" })

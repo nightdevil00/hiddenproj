@@ -349,7 +349,7 @@ PanelWindow {
         // Takes no input, ever.
         mask: Region {}
 
-        // The board's part of the screen, and the bar's band in zen, where
+        // The board's part of the screen, and the bar's band in stripped, where
         // no bar covers the windows; the dock keeps its band.
         ClippingRectangle {
             id: backdropClip

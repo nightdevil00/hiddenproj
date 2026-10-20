@@ -92,8 +92,8 @@ monitor over DDC/CI.
 
 **The palette comes out of the painting.** Pick a wallpaper and its colours
 reach everything at once: the island and the widgets, the terminal, neovim,
-VSCodium, the GTK and Qt windows, Nautilus down to its folders, Vesktop, Zen
-and Spotify. Thirty-three paintings come with it, and a video can be the wallpaper
+VSCodium, the GTK and Qt windows, Nautilus down to its folders, Vesktop and
+Spotify. Thirty-three paintings come with it, and a video can be the wallpaper
 too.
 
 **Any module can live on the wallpaper**, on a grid, in four shapes, drawn in
@@ -128,8 +128,10 @@ packages and effects for the webcam in any call. A pet lives on the bar, and
 </p>
 
 **The lock shows what is playing**: the cover blurred behind it and the
-lyrics in time. **With an infrared camera it opens for your face.** The login
-screen and the boot splash are the same design, before there is a session.
+lyrics in time. **It opens for your face.** An infrared camera is what howdy
+is built for and what the setup prefers; a colour-only one works too, but a
+photograph can then fool it. The login screen and the boot splash are the
+same design, before there is a session.
 
 ## Installation
 
@@ -195,11 +197,11 @@ never overwrites a file you edited.
 | 🪄 | Annotator | [satty](https://github.com/gabm/Satty) |
 | 💬 | Chat | [Vesktop](https://github.com/Vencord/Vesktop) |
 | 🎧 | Player | [Spotify](https://www.spotify.com) · [spicetify](https://spicetify.app) |
-| 🌐 | Browser | [Zen](https://zen-browser.app) |
+| 🌐 | Browser | [Google Chrome](https://www.google.com/chrome) |
 | 🔆 | Monitor brightness | [ddcutil](https://www.ddcutil.com) |
 | 🔑 | Login screen | [SDDM](https://github.com/sddm/sddm) |
 | 🎨 | Boot splash | [Plymouth](https://gitlab.freedesktop.org/plymouth/plymouth) |
-| 👤 | Face unlock | [howdy-next](https://codeberg.org/nathawat/howdy-next) |
+| 👤 | Face unlock | [howdy-git](https://github.com/boltgolt/howdy) |
 | 📷 | Camera effects | [MediaPipe](https://ai.google.dev/edge/mediapipe) · [v4l2loopback](https://github.com/umlaeute/v4l2loopback) |
 
 </details>
@@ -216,9 +218,13 @@ knowing first:
   on, <kbd>SUPER</kbd> <kbd>TAB</kbd> all of them at once
 - <kbd>SUPER</kbd> <kbd>ALT</kbd> <kbd>←</kbd> <kbd>→</kbd> the other screen,
   adding <kbd>SHIFT</kbd> takes the workspace with you
-- <kbd>SUPER</kbd> <kbd>X</kbd> the session menu, <kbd>SUPER</kbd> <kbd>L</kbd>
-  locks
-- <kbd>SUPER</kbd> <kbd>H</kbd> every other key, on the island
+- <kbd>SUPER</kbd> <kbd>C</kbd> <kbd>X</kbd> <kbd>V</kbd> <kbd>A</kbd> copy, cut,
+  paste and select all, in whichever program is focused — a terminal gets
+  <kbd>CTRL</kbd> <kbd>SHIFT</kbd> for copy and paste
+- <kbd>SUPER</kbd> <kbd>CTRL</kbd> <kbd>X</kbd> the session menu,
+  <kbd>SUPER</kbd> <kbd>L</kbd> locks
+- <kbd>SUPER</kbd> <kbd>CTRL</kbd> <kbd>V</kbd> the clipboard history,
+  <kbd>SUPER</kbd> <kbd>H</kbd> every other key, on the island
 
 ## Credits
 

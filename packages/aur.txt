@@ -43,7 +43,7 @@ lavat                        # the lava function
 # ── THEMED APPLICATIONS ─────────────────────────────────────────────────────
 
 vscodium-bin                 # extensions and settings · ./setup vscodium
-zen-browser-bin
+google-chrome
 vesktop-bin
 spotify
 spicetify-cli                # applies the palette to Spotify · ./setup spotify
@@ -56,8 +56,9 @@ quickemu                     # the machines panel · brings quickget, spicy and 
 
 # ── FACE UNLOCK ─────────────────────────────────────────────────────────────
 
-# · howdy-next is not listed: ./setup face installs it, and only where there
-# · is an infrared camera, since it brings opencv with it.
+# · howdy-git is not listed: ./setup face installs it, and only where there
+# · is a camera, since it brings opencv with it. The plain howdy package is
+# · 2.6.1, on pam_python.so, and does not fit this lock screen.
 
 
 # ── CAMERA EFFECTS ──────────────────────────────────────────────────────────

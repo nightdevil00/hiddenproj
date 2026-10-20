@@ -29,7 +29,7 @@ PanelWindow {
 
     implicitHeight: 1
     color: "transparent"
-    // Nothing in zen, so the windows take the band.
+    // Nothing in stripped, so the windows take the band.
     exclusiveZone: SettingsService.barHidden ? 0 : Theme.barReserve
 
     // Under everything, and deaf.
