@@ -241,6 +241,10 @@ knowing first:
   <kbd>CTRL</kbd> <kbd>SHIFT</kbd> for copy and paste
 - <kbd>SUPER</kbd> <kbd>CTRL</kbd> <kbd>X</kbd> the session menu,
   <kbd>SUPER</kbd> <kbd>L</kbd> locks
+- <kbd>SUPER</kbd> <kbd>SHIFT</kbd> <kbd>S</kbd> the capture surface,
+  <kbd>SUPER</kbd> <kbd>SHIFT</kbd> <kbd>R</kbd> starts and stops a recording;
+  the keyboard's own screenshot key picks a region straight into satty, and its
+  recording key does the same as <kbd>SUPER</kbd> <kbd>SHIFT</kbd> <kbd>R</kbd>
 - <kbd>SUPER</kbd> <kbd>CTRL</kbd> <kbd>V</kbd> the clipboard history,
   <kbd>SUPER</kbd> <kbd>H</kbd> every other key, on the island
 

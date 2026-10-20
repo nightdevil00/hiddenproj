@@ -70,7 +70,9 @@ Singleton {
         { name: "captureScreen",  label: "Capture the screen",   description: "Shell · Capture the whole screen" },
         { name: "captureEdit",    label: "Capture and annotate", description: "Shell · Capture a region and annotate it" },
         { name: "captureText",    label: "Read a region",        description: "Shell · Read a region as text" },
-        { name: "record",         label: "Record the screen",    description: "Shell · Start or stop recording the screen" }
+        { name: "record",         label: "Record the screen",    description: "Shell · Start or stop recording the screen" },
+        { name: "captureEditKey", label: "Screenshot key",       description: "Shell · Capture a region and annotate it, from the screenshot key" },
+        { name: "recordKey",      label: "Recording key",        description: "Shell · Start or stop recording the screen, from the recording key" }
     ]
 
     readonly property var keys: SettingsService.keys

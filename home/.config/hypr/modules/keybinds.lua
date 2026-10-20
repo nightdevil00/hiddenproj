@@ -402,6 +402,13 @@ bind(mainMod .. " + SHIFT + C", hl.dsp.global("quickshell:picker"),     { descri
 bind(mainMod .. " + SHIFT + S", hl.dsp.global("quickshell:capture"), { description = "Shell · Open the capture surface" })
 bind("Print",                   hl.dsp.global("quickshell:capture"), { description = "Shell · Open the capture surface, from Print" })
 bind(mainMod .. " + SHIFT + R", hl.dsp.global("quickshell:record"),  { description = "Shell · Start or stop recording the screen" })
+
+-- · the keyboard's own screenshot and recording keys, where it has them:
+-- · the screenshot key goes straight to a region in satty, and the recording
+-- · key starts and stops a take. Both are described apart from the shift
+-- · versions above, so Settings → Keys can move one without the other.
+bind(mainMod .. " + XF86SelectiveScreenshot", hl.dsp.global("quickshell:captureEdit"), { description = "Shell · Capture a region and annotate it, from the screenshot key" })
+bind(mainMod .. " + XF86Favorites",           hl.dsp.global("quickshell:record"),       { description = "Shell · Start or stop recording the screen, from the recording key" })
 bind("", hl.dsp.global("quickshell:captureRegion"), { description = "Shell · Capture a region" })
 bind("", hl.dsp.global("quickshell:captureWindow"), { description = "Shell · Capture a window" })
 bind("", hl.dsp.global("quickshell:captureScreen"), { description = "Shell · Capture the whole screen" })
