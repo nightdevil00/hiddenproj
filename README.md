@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/andreumassanet/impasto/actions/workflows/check.yml"><img src="https://github.com/andreumassanet/impasto/actions/workflows/check.yml/badge.svg" alt="check"></a>
+  <a href="https://github.com/nightdevil00/hiddenproj/actions/workflows/check.yml"><img src="https://github.com/nightdevil00/hiddenproj/actions/workflows/check.yml/badge.svg" alt="check"></a>
   <img src="https://img.shields.io/badge/Arch_Linux-1793d1?style=flat-square&logo=archlinux&logoColor=white" alt="Arch Linux">
   <img src="https://img.shields.io/badge/Hyprland-Lua_config-58e1ff?style=flat-square&logo=hyprland&logoColor=white" alt="Hyprland">
   <img src="https://img.shields.io/badge/Quickshell-0.3-000000?style=flat-square" alt="Quickshell">
@@ -41,6 +41,13 @@ repository second — `home/.config/quickshell` is most of the code, and the res
 of `home/` is the desk around it: the terminal, the prompt, two editors, two
 file managers, a browser, a chat client, the login screen. **Change the
 wallpaper and all of it follows.**
+
+> [!NOTE]
+> **This repository is a fork, and it is managed outside the upstream project.**
+> It follows [andreumassanet/impasto](https://github.com/andreumassanet/impasto),
+> where the shell itself is developed; upstream does not maintain this copy, so
+> issues and pull requests belong there rather than here. What is in this fork is
+> the upstream shell with the changes made after the fork was taken.
 
 ## The island
 
@@ -138,7 +145,7 @@ same design, before there is a session.
 Arch Linux and Hyprland 0.56 or newer, from a terminal or a console:
 
 ```bash
-git clone https://github.com/andreumassanet/impasto.git ~/impasto
+git clone https://github.com/nightdevil00/hiddenproj.git ~/impasto
 cd ~/impasto
 ./setup install
 ```
