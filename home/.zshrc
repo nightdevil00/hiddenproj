@@ -104,6 +104,9 @@ function y() {
 
 alias cls="clear"
 
+# · opencode, with the permissions auto-approved
+alias c="opencode --auto"
+
 # · fastfetch with the greeting scene chosen in the settings. fastfetch's
 #   config points at the chosen scene; "random" is resolved here. `fa koi`
 #   forces a scene.
