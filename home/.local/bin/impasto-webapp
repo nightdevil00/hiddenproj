@@ -1,0 +1,343 @@
+#!/usr/bin/env bash
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │                                                                          │
+# │   I M P A S T O · W E B A P P                                            │
+# │   a site in the browser, wearing a launcher of its own                   │
+# │                                                                          │
+# │   github.com/andreumassanet/impasto                                      │
+# │                                                                          │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
+# A web app is nothing but a .desktop file whose Exec opens the browser with
+# --app=<url>, so the site runs in its own window, with no tab strip, no
+# address bar and its own icon in the launcher and the dock. Everything below
+# exists to write that one file, and the icon it names, correctly.
+#
+# Called by `./setup webapps` for the eight shipped sites and by
+# `impasto webapp add` for any you name yourself.
+#
+#   impasto-webapp add <name> <url> [icon]
+#   impasto-webapp remove <name>
+#   impasto-webapp list
+#
+# An icon argument may be a file, an http(s) URL, or an icon name already on
+# the system. Left out, the site's own is fetched.
+
+set -euo pipefail
+
+ICON_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/256x256/apps"
+ICON_THEME="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+
+# The launchers setup ships. Name and URL, in the order they land in the
+# launcher; the icon is fetched from the site.
+SHIPPED=(
+    'ChatGPT|https://chatgpt.com/'
+    'Discord|https://discord.com/channels/@me'
+    'Facebook|https://www.facebook.com/'
+    'Instagram|https://www.instagram.com/'
+    'Reddit|https://www.reddit.com/'
+    'TikTok|https://www.tiktok.com/'
+    'X|https://x.com/'
+    'YouTube|https://www.youtube.com/'
+)
+
+die() { printf 'impasto-webapp: %s\n' "$*" >&2; exit 1; }
+say() { printf '%s\n' "$*"; }
+
+# The name becomes a filename and a window title. A slash would put the file
+# in a directory of its own, or walk out of the applications directory
+# altogether, and a name starting with a dash would be read as an option.
+require_plain_name() {
+    [[ -n $1 ]] || die 'the name cannot be empty'
+    [[ $1 == */* ]] && die "the name cannot contain '/': $1"
+    [[ $1 == -* ]] && die "the name cannot start with '-': $1"
+    return 0
+}
+
+# The name as one, lowercased and dashed: the icon's filename on disk.
+slug() {
+    printf '%s\n' "$1" | tr '[:upper:]' '[:lower:]' \
+        | sed 's/[^[:alnum:]]\+/-/g; s/^-//; s/-$//'
+}
+
+# Chromium names an --app window after the URL's host and path, and the format
+# is stable: chrome-<host>_<path with / as _>-Default. Writing it into
+# StartupWMClass is what lets the titlebar show "Discord" rather than the page
+# title, and what lets the dock match the window to this launcher.
+window_class() {
+    local url=$1 address host path
+    address=${url#*://}
+    address=${address%%[?#]*}
+    host=${address%%/*}
+    path=${address:${#host}}
+    host=${host##*@}     # strip any user@
+    host=${host%%:*}     # strip any :port
+    printf 'chrome-%s_%s-Default\n' "${host,,}" "${path:-/}" | sed 's|/|_|g'
+}
+
+# Chromium's --app= runs javascript:, file: and data: as documents, so that a
+# URL typed into the name field cannot become a local file. A schemeless host
+# gets https, and nothing but http(s) is written.
+normalize_url() {
+    local url=$1
+    if [[ ! $url =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: ]]; then
+        url="https://$url"
+    fi
+    [[ $url =~ [[:space:]] ]] && die 'the URL cannot contain whitespace'
+    [[ ${url,,} =~ ^https?:// ]] || die 'the URL must be http or https'
+    printf '%s' "$url"
+}
+
+# One Exec argument, double-quoted as the desktop-entry spec wants: inside
+# quotes \ " ` $ take a backslash, and a literal % is written %%.
+exec_arg() {
+    printf '"%s"' "$(printf '%s' "$1" \
+        | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/`/\\`/g' -e 's/\$/\\$/g' -e 's/%/%%/g')"
+}
+
+# A value in the desktop file: a newline would end the line and start a key of
+# its own, so tab, CR and LF are escaped, as is a leading space.
+desktop_string() {
+    local value=$1
+    value=${value//\\/\\\\}
+    value=${value//$'\t'/\\t}
+    value=${value//$'\r'/\\r}
+    value=${value//$'\n'/\\n}
+    [[ $value == " "* ]] && value="\\s${value# }"
+    printf '%s' "$value"
+}
+
+# The browser a web app opens in: Chrome, the one impasto installs, and the
+# first Chromium-family browser found otherwise. Chromium, Brave, Edge, Opera
+# and Vivaldi all take --app= the same way; Firefox has no --app, so it is not
+# a candidate.
+browser_bin() {
+    local candidate
+    for candidate in google-chrome-stable google-chrome chromium brave brave-browser \
+                     microsoft-edge-stable microsoft-edge opera vivaldi-stable; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# A downloaded file that is not an image is thrown away, so a captive portal's
+# HTML does not become the launcher's icon. What arrives may be WebP (many
+# sites now serve apple-touch-icon as WebP), which the icon theme does not
+# always load, so it is converted to PNG in place when magick is there.
+download_image() {
+    local url=$1 dest=$2
+    curl -fsSL --max-time 10 -o "$dest" "$url" 2>/dev/null || return 1
+    [[ -s $dest ]] || return 1
+    [[ $(file -b --mime-type "$dest" 2>/dev/null) == image/* ]] || return 1
+    local mime
+    mime=$(file -b --mime-type "$dest")
+    if [[ $mime == image/webp ]] && command -v magick >/dev/null 2>&1; then
+        magick "$dest" "${dest%.*}.png" 2>/dev/null && mv "${dest%.*}.png" "$dest" || true
+    fi
+    return 0
+}
+
+# Pixel size of an image, as a number for comparison; 0 when it cannot be read.
+image_size() {
+    local size
+    size=$(magick identify -format '%[fx:max(w,h)]' "$1" 2>/dev/null) || { printf 0; return; }
+    printf '%s\n' "${size%.*}"
+}
+
+# The icons a page declares, largest first. apple-touch-icon is preferred over
+# a plain icon because it is the one sites keep big, and a `sizes=` attribute
+# settles it when present; the site's own declarations beat the well-known
+# path, and Google's favicon service is the last resort, since it always
+# answers something even when the page declares nothing.
+declared_icons() {
+    local page=$1 origin=$2 tag href sizes
+    grep -oiE "<link[^>]*rel=[\"'][^\"']*icon[^\"']*[\"'][^>]*>" <<<"$page" \
+        | while IFS= read -r tag; do
+            href=$(grep -oiE "href=[\"'][^\"']+" <<<"$tag" | head -1 | sed -E "s/^href=[\"']//" || true)
+            [[ -n $href ]] || continue
+            sizes=$(grep -oiE "sizes=[\"'][^\"']+" <<<"$tag" | head -1 | sed -E "s/^sizes=[\"']//" || true)
+            [[ $sizes == *x* ]] || sizes="0x0"
+            case $href in
+                http://* | https://*) ;;
+                //*) href="https:$href" ;;
+                /*)  href="$origin$href" ;;
+                ?*)  href="$origin/$href" ;;
+            esac
+            printf '%s %s\n' "${sizes%%x*}" "$href"
+        done | sort -rn | awk '!seen[$2]++ {print $2}'
+}
+
+fetch_site_icon() {
+    local site=$1 dest=$2 origin page candidate best=0 size
+    origin=$(sed -E 's|^(https?://[^/]+).*|\1|' <<<"$site")
+    page=$(curl -fsSL --max-time 5 "$site" 2>/dev/null | head -c 200000 | tr '\n' ' ' || true)
+
+    # The well-known path leads, then whatever the page declares, then the
+    # favicon service. Each candidate is downloaded and measured, and the
+    # biggest one that arrived wins.
+    for candidate in \
+        "$origin/apple-touch-icon.png" \
+        $(declared_icons "$page" "$origin") \
+        "https://www.google.com/s2/favicons?domain=${site}&sz=256"
+    do
+        [[ -n $candidate ]] || continue
+        download_image "$candidate" "$dest.try" 2>/dev/null || continue
+        size=$(image_size "$dest.try")
+        if (( size > best )); then
+            best=$size
+            mv "$dest.try" "$dest"
+        fi
+        rm -f "$dest.try"
+    done
+    [[ $best -gt 0 ]]
+}
+
+# The icon the desktop file should name. $1 the icon argument (a file, a URL,
+# an icon name or empty), $2 the app name, $3 the URL. Prints the icon value;
+# fails only when a download was wanted and did not arrive.
+resolve_icon() {
+    local ref=$1 name=$2 url=$3 slug_name dest ext
+    slug_name=$(slug "$name")
+    mkdir -p "$ICON_DIR"
+
+    if [[ -z $ref ]]; then
+        dest="$ICON_DIR/$slug_name.png"
+        fetch_site_icon "$url" "$dest" || return 1
+        gtk-update-icon-cache "$ICON_THEME" &>/dev/null || true
+        printf '%s\n' "$slug_name"
+    elif [[ $ref =~ ^https?:// ]]; then
+        dest="$ICON_DIR/$slug_name.png"
+        download_image "$ref" "$dest" || return 1
+        gtk-update-icon-cache "$ICON_THEME" &>/dev/null || true
+        printf '%s\n' "$slug_name"
+    elif [[ -f $ref ]]; then
+        ext=${ref##*.}
+        [[ $ext == "$ref" ]] && ext=png
+        # Keep the source's extension so the loader sees the real format.
+        cp "$ref" "$ICON_DIR/$slug_name.$ext"
+        gtk-update-icon-cache "$ICON_THEME" &>/dev/null || true
+        printf '%s\n' "$slug_name"
+    else
+        # An icon name already on the system, or one the theme provides.
+        printf '%s\n' "$ref"
+    fi
+}
+
+install_one() {
+    local name=$1 url=$2 icon_ref=${3:-}
+    require_plain_name "$name"
+    url=$(normalize_url "$url")
+
+    local browser icon_value class file
+    browser=$(browser_bin) || die 'no Chromium browser found (Chrome, Chromium, Brave, Edge, Opera, Vivaldi)'
+
+    if ! icon_value=$(resolve_icon "$icon_ref" "$name" "$url"); then
+        say "  icon: could not be fetched; the launcher will fall back to a glyph"
+        icon_value=$(slug "$name")
+    fi
+
+    class=$(window_class "$url")
+    mkdir -p "$DESKTOP_DIR"
+    file="$DESKTOP_DIR/$(slug "$name").desktop"
+
+    {
+        printf '[Desktop Entry]\n'
+        printf 'Version=1.0\n'
+        printf 'Name=%s\n'             "$(desktop_string "$name")"
+        printf 'Comment=%s\n'          "$(desktop_string "$name")"
+        printf 'Exec=%s\n'             "$(desktop_string "$browser $(exec_arg "--app=$url")")"
+        printf 'Terminal=false\n'
+        printf 'Type=Application\n'
+        printf 'Icon=%s\n'             "$(desktop_string "$icon_value")"
+        printf 'StartupNotify=true\n'
+        printf 'StartupWMClass=%s\n'   "$(desktop_string "$class")"
+        printf 'Categories=Network;WebBrowser;\n'
+    } > "$file"
+    chmod +x "$file"
+
+    update-desktop-database "$DESKTOP_DIR" &>/dev/null || true
+    say "  $name"
+}
+
+remove_one() {
+    local name=$1 slug_name file icon
+    require_plain_name "$name"
+    slug_name=$(slug "$name")
+    file="$DESKTOP_DIR/$slug_name.desktop"
+    if [[ ! -f $file ]]; then
+        die "no web app named $name"
+    fi
+    rm -f "$file"
+    for icon in "$ICON_DIR/$slug_name.png" "$ICON_DIR/$slug_name.svg" \
+                "$ICON_DIR/$slug_name.jpg" "$ICON_DIR/$slug_name.jpeg" \
+                "$ICON_DIR/$slug_name.webp"; do
+        rm -f "$icon"
+    done
+    update-desktop-database "$DESKTOP_DIR" &>/dev/null || true
+    say "removed $name"
+}
+
+# Every launcher this wrote, by reading the ones whose Exec calls the browser
+# with --app=. That identifies them without a sidecar list, so a web app
+# installed by hand is still listed and removable.
+list_webapps() {
+    local file name
+    [[ -d $DESKTOP_DIR ]] || return 0
+    for file in "$DESKTOP_DIR"/*.desktop; do
+        [[ -f $file ]] || continue
+        grep -qE '^(Exec|TryExec)=.*--app=' "$file" 2>/dev/null || continue
+        name=$(sed -n 's/^Name=//p' "$file" | head -1)
+        [[ -n $name ]] || name=$(basename "$file" .desktop)
+        printf '%s\n' "$name"
+    done | sort
+}
+
+usage() {
+    cat <<'EOF'
+usage: impasto-webapp <command> [arguments]
+
+  add <name> <url> [icon]   a launcher that opens the site in its own window;
+                            the icon may be a file, an http(s) URL, or an icon
+                            name on the system, and is fetched from the site
+                            when left out
+  remove <name>             delete a launcher and its icon
+  list                      every web app installed
+EOF
+}
+
+command=${1:-}
+case $command in
+    add)
+        [[ $# -ge 3 ]] || die 'add needs a name and a URL'
+        install_one "$2" "$3" "${4:-}"
+        ;;
+    remove)
+        [[ $# -ge 2 ]] || die 'remove needs a name'
+        remove_one "$2"
+        ;;
+    list)
+        list_webapps
+        ;;
+    shipped)
+        # setup calls this to install the eight that ship; each name and URL.
+        for entry in "${SHIPPED[@]}"; do
+            install_one "${entry%%|*}" "${entry#*|}"
+        done
+        ;;
+    shipped-remove)
+        # Uninstall: take back the eight setup made, leaving any you added.
+        for entry in "${SHIPPED[@]}"; do
+            remove_one "${entry%%|*}" 2>/dev/null || true
+        done
+        ;;
+    ""|-h|--help|help)
+        usage
+        ;;
+    *)
+        die "no command '$command'"
+        ;;
+esac

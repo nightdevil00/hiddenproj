@@ -134,6 +134,7 @@ LOCAL = {
     "capture screen": "a shot of the focused screen to a file; prints its path",
     "capture text": "the text on the focused screen, read with tesseract",
     "capture region|window": "the capture surface, to pick one by hand",
+    "webapp add|remove|list": "a site in its own browser window, with a launcher of its own",
     "watch [--interval s]": "a line of JSON for each change: a timer ending, a track, a machine…",
     "version": "impasto's version, as ./setup last installed it",
 }
@@ -152,6 +153,7 @@ examples:
   impasto vm start fedora-43-Workstation
   impasto layout scrolling
   impasto say "Build finished"
+  impasto webapp add Linear https://linear.app
   impasto capture screen
   impasto watch
   impasto status"""
@@ -274,6 +276,68 @@ def version():
         answer({"error": "no version: impasto was not installed with ./setup"}, True)
     answer({"ok": True, "version": lines[0].strip(),
             "branch": (lines[1] if len(lines) > 1 else "").strip()})
+
+
+def webapp_script():
+    """The helper that writes the launchers, in $HOME or the working tree."""
+    home = os.path.expanduser("~/.local/bin/impasto-webapp")
+    if os.access(home, os.X_OK):
+        return home
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "impasto-webapp")
+
+
+def webapp(arguments):
+    """add, remove and list. The launcher is a .desktop file whose Exec opens
+    the browser with --app=, written by impasto-webapp, which ./setup webapps
+    also calls for the eight sites that ship."""
+    script = webapp_script()
+    if not os.path.isfile(script):
+        answer({"error": "impasto-webapp is missing; ./setup sync puts it back"}, True)
+
+    def run(*words):
+        try:
+            return subprocess.run([script, *words], capture_output=True, text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError) as error:
+            answer({"error": str(error)}, True)
+
+    verb = arguments[0] if arguments else ""
+    rest = arguments[1:]
+
+    if verb == "list":
+        result = run("list")
+        names = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        answer({"ok": True, "webapps": names})
+
+    if verb == "add":
+        if not rest:
+            answer({"error": "webapp add needs a name and a URL"}, True)
+        result = run("add", *rest)
+        if result.returncode != 0:
+            answer({"error": (result.stderr.strip() or "the launcher was not written")}, True)
+        answer({"ok": True, "name": rest[0], "url": rest[1] if len(rest) > 1 else "",
+                "icon": rest[2] if len(rest) > 2 else ""})
+
+    if verb == "remove":
+        if not rest:
+            answer({"error": "webapp remove needs a name"}, True)
+        result = run("remove", rest[0])
+        if result.returncode != 0:
+            answer({"error": (result.stderr.strip() or "nothing was removed")}, True)
+        answer({"ok": True, "name": rest[0]})
+
+    answer({"error": "webapp add <name> <url> [icon], remove <name>, or list"}, True)
+
+
+def installed_webapps():
+    """The names of the web apps installed, for completion; empty on any error."""
+    script = webapp_script()
+    if not os.path.isfile(script):
+        return []
+    try:
+        result = subprocess.run([script, "list"], capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 def capture_script():
@@ -403,9 +467,13 @@ def complete(words):
 
     choices = []
     if not words:
-        choices = list(COMMANDS) + ["capture", "watch", "version", "help"]
+        choices = list(COMMANDS) + ["capture", "watch", "version", "webapp", "help"]
     elif words[0] == "capture" and len(words) == 1:
         choices = ["screen", "text", "region", "window"]
+    elif words[0] == "webapp" and len(words) == 1:
+        choices = ["add", "remove", "list"]
+    elif words[0] == "webapp" and len(words) == 2 and words[1] == "remove":
+        choices = installed_webapps()
     elif words[0] == "watch":
         choices = ["--interval"]
     elif words[0] == "help" and len(words) == 1:
@@ -449,6 +517,7 @@ def main():
         print(usage(arguments[1] if len(arguments) > 1 else None))
         return
     local = {"version": lambda: version(), "capture": lambda: capture(arguments[1:]),
+             "webapp": lambda: webapp(arguments[1:]),
              "watch": lambda: watch(arguments[1:]), "complete": lambda: complete(arguments[1:])}
     if arguments[0] in local:
         local[arguments[0]]()

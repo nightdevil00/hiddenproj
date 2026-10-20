@@ -156,7 +156,7 @@ up the login screen, the plugins and the programs around the shell. Run
 | `--skip-packages` | install nothing; copy and build only |
 | `--skip-system` | leave `/` alone — no login screen, and no password for it |
 | `--skip-plugins` | no shake to find, no glass |
-| `--skip-extras` | leave Nautilus, VSCodium, Vesktop, Spotify, GTK, face unlock, the camera and the boot splash alone |
+| `--skip-extras` | leave Nautilus, VSCodium, Vesktop, Spotify, GTK, face unlock, the camera, the boot splash and the web apps alone |
 | `--aur-helper yay\|paru` | which helper builds the AUR half — built from the AUR if you have neither |
 | `--noconfirm` | take the default at every question |
 | `-n`, `--dry-run` | say what would happen, and do none of it |
@@ -171,6 +171,24 @@ up the login screen, the plugins and the programs around the shell. Run
 
 Nothing is linked: `setup` copies, keeps a backup of anything in the way, and
 never overwrites a file you edited.
+
+<details>
+<summary><b>Web apps</b></summary>
+<br>
+
+`./setup webapps` gives **Discord, Reddit, Facebook, X, Instagram, TikTok,
+ChatGPT and YouTube** a launcher each: the site opens in its own Chrome window,
+with no tab strip and no address bar, its own icon in the launcher and the
+dock, and `StartupWMClass` set so the titlebar names the app rather than the
+page. The icon is fetched from the site at install time.
+
+```bash
+impasto webapp add Linear https://linear.app   # any site, with its icon
+impasto webapp list
+impasto webapp remove Linear
+```
+
+</details>
 
 <details>
 <summary><b>Components</b></summary>

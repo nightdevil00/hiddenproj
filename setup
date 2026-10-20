@@ -181,6 +181,10 @@ Usage: ./setup <command> [options]
   splash      the boot splash: chooses the theme, adds splash to the kernel
               command line and rebuilds the initramfs (asks for a password)
 
+  webapps     a launcher for each of the eight sites that ship — Discord,
+              Reddit, Facebook, X, Instagram, TikTok, ChatGPT, YouTube — so
+              each opens in its own Chrome window with its own icon. Add your
+              own with `impasto webapp add <name> <url>`
   files       the installed files you have edited or deleted, and each one
               put back: files [list | restore | reset | keep] [path…], paths
               as list prints them, under $HOME
@@ -1021,6 +1025,12 @@ restore() {
 
 verb_uninstall() {
     SUDO=
+    # Before home/ goes: the web app launchers setup made live outside the
+    # manifest, so remove_tree cannot see them. Only the eight it ships are
+    # taken back; anything `impasto webapp add` made is yours and stays.
+    if [[ -x $REPO/home/.local/bin/impasto-webapp ]]; then
+        act "$REPO/home/.local/bin/impasto-webapp" shipped-remove
+    fi
     remove_tree home "$HOME" "$STATE/home.manifest" '~/'
     restore home "$HOME" '~/'
     SUDO=sudo
@@ -1053,8 +1063,8 @@ verb_uninstall() {
 # ── EXTRAS ──────────────────────────────────────────────────────────────────
 #
 # What a copied file cannot hold: what opens which file, dark GTK, the cursor,
-# Nautilus, VSCodium, Vesktop, Spotify, face unlock, the camera effects and the
-# boot splash.
+# Nautilus, VSCodium, Vesktop, Spotify, face unlock, the camera effects, the
+# boot splash and the web apps.
 # `install` sets each up once per machine, and one that cannot run yet is
 # skipped with the reason and tried again by the next install or update.
 # After that only its own verb runs it, so a setting changed in one of those
@@ -1086,6 +1096,7 @@ extras() {
     applied nautilus || soft nautilus verb_nautilus
     applied vscodium || soft vscodium verb_vscodium
     applied vesktop || soft vesktop verb_vesktop
+    applied webapps || soft webapps verb_webapps
     applied face || soft face verb_face
     applied camera || soft camera verb_camera
     applied splash || soft splash verb_splash
@@ -1245,6 +1256,39 @@ verb_vesktop() {
     act python3 "$THEME_MANAGER" apply-vesktop || refuse 'the theme was not ticked' || return
     stamp vesktop
     say 'theme ticked'
+}
+
+# The eight sites that ship as web apps: a launcher each, whose Exec opens
+# Chrome with --app=<url> so the site runs in its own window, with its own
+# icon in the launcher and the dock, and no tab strip or address bar. The
+# launchers are made by impasto-webapp, which `impasto webapp` also drives for
+# any site you name yourself.
+webapp_script() {
+    local script
+    for script in "$HOME/.local/bin/impasto-webapp" "$REPO/home/.local/bin/impasto-webapp"; do
+        [[ -x $script ]] && { printf '%s\n' "$script"; return 0; }
+    done
+    return 1
+}
+
+verb_webapps() {
+    section 'web apps'
+    local script browser
+    command -v curl >/dev/null || refuse 'curl is not installed (package: curl)' || return
+    script=$(webapp_script) || refuse 'impasto-webapp is not installed yet (./setup sync)' || return
+    browser=
+    for browser in google-chrome-stable google-chrome chromium brave brave-browser \
+                   microsoft-edge-stable microsoft-edge opera vivaldi-stable; do
+        command -v "$browser" >/dev/null && { browser=$browser; break; }
+    done
+    [[ -n $browser ]] || refuse 'no Chromium browser is installed (Chrome is the one packages installs)' || return
+    if (( DRY )); then
+        say "would make a launcher for each of the eight shipped sites, in $browser"
+        return
+    fi
+    "$script" shipped
+    stamp webapps
+    say "opened by $browser; impasto webapp add <name> <url> for more"
 }
 
 # Colours come from gtk.css and the right-click menu is a file in home/; the
@@ -1540,6 +1584,9 @@ verb_check() {
 
     section bash
     bash -n setup
+    mapfile -t files < <(find home -name '*.sh')
+    files+=("home/.local/bin/impasto-webapp")
+    bash -n "${files[@]}"
     say 'syntax ok'
 
     # Plain JSON only (the one .jsonc file is fastfetch's). A typo in the
@@ -1631,6 +1678,7 @@ VERBS=(
     'install:everything: the packages, the files, the system, the plugins'
     'update:pull what is new, and install it'
     'sync:copy home/ into $HOME'
+    'webapps:the eight web apps'
     'uninstall:remove what was installed, and put back what it moved aside'
     'check:the syntax checks CI runs'
     'help:every verb and flag'
@@ -1698,7 +1746,7 @@ parts() {
                 packages) note="$pacman from the repositories, $aur from the AUR" ;;
                 system)   note='sddm, unless this machine already has one' ;;
                 plugins)  note='shake to find · glass on the windows' ;;
-                extras)   note='Nautilus, VSCodium, Vesktop, Spotify, GTK, your face, the camera, the boot splash' ;;
+                extras)   note='Nautilus, VSCodium, Vesktop, Spotify, GTK, your face, the camera, the boot splash, the web apps' ;;
             esac
             if (( on[i] )); then box="$ACCENT◉$OFF"; else box="$FAINT○$OFF"; fi
             if (( i == at )); then
@@ -1771,6 +1819,7 @@ interactive() {
         install)   verb_install ;;
         update)    ARGS=(update); (( DRY )) && ARGS+=(--dry-run); verb_update ;;
         sync)      verb_sync ;;
+        webapps)   verb_webapps ;;
         uninstall) ask 'remove every file setup installed?' || return 0; verb_uninstall ;;
         check)     verb_check ;;
         help)      usage ;;
@@ -1826,6 +1875,7 @@ main() {
         vscodium)  verb_vscodium ;;
         nautilus)  verb_nautilus ;;
         vesktop)   verb_vesktop ;;
+        webapps)   verb_webapps ;;
         face)      verb_face ;;
         camera)    verb_camera ;;
         splash)    verb_splash ;;
